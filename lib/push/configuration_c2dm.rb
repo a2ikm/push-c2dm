@@ -1,9 +1,8 @@
 module Push
   class ConfigurationC2dm < Push::Configuration
-    store :properties, accessors: [:email, :password]
-    attr_accessible :app, :enabled, :connections, :email, :password
-    validates :email, :presence => true
-    validates :password, :presence => true
+    store :properties, accessors: [:auth_token]
+    attr_accessible :app, :enabled, :connections, :auth_token
+    validates :auth_token, :presence => true
 
     def name
       :c2dm

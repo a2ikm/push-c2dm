@@ -13,12 +13,10 @@ module Push
           @provider = provider
           @name = "#{@provider.configuration[:name]}: ConnectionC2dm #{i}"
 
-          @email = @provider.configuration[:email]
-          @password = @provider.configuration[:password]
+          @auth_token = @provider.configuration[:auth_token]
         end
 
         def connect
-          @auth_token = fetch_auth_token
           @last_use = Time.now
           uri = URI.parse(PUSH_URL)
           @connection = open_http(uri.host, uri.port)
@@ -40,14 +38,12 @@ module Push
             @response.header.each_header do |key, value|
               if key.capitalize == "Update-Client-Auth".capitalize
                 Push::Daemon.logger.info("[#{@name}] Received new authentication token")
-                @auth_token = value
+                @auth_token = value # auth_token is refreshed, but won't be used.
               end
             end
 
           elsif @response.code.eql? "401"
-            # auth failed.  Refresh auth key and requeue
-            @auth_token = fetch_auth_token
-            @response = notification_request(data)
+            # auth failed.
 
           elsif response.code.eql? "503"
             # service un-available.
@@ -61,15 +57,6 @@ module Push
           http.use_ssl = true
           http.verify_mode = OpenSSL::SSL::VERIFY_NONE
           return http
-        end
-
-        def fetch_auth_token
-          data = "accountType=HOSTED_OR_GOOGLE&Email=#{@email}&Passwd=#{@password}&service=ac2dm&source=push"
-          headers = { 'Content-Type' => 'application/x-www-form-urlencoded' }
-          uri = URI.parse(AUTH_URL)
-          http = open_http(uri.host, uri.port)
-          response = http.post(uri.path, data, headers)
-          return response.body[/Auth=(.*)/, 1]
         end
 
         def notification_request(data)
